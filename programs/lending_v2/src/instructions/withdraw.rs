@@ -3,6 +3,7 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
+use std::f64::consts::E;
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -49,6 +50,7 @@ pub struct Withdraw<'info> {
 
 pub fn process_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
     let user = &mut ctx.accounts.user;
+    let bank = &mut ctx.accounts.bank;
 
     let deposited_value: u64 = if ctx.accounts.mint.to_account_info().key() == user.usdc_address {
         user.deposited_usdc
@@ -57,6 +59,19 @@ pub fn process_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
     };
 
     if amount > deposited_value {
+        return Err(ErrorCode::InsufficientFunds.into());
+    }
+
+    let time_diff = user.last_updated - Clock::get()?.unix_timestamp;
+
+    bank.total_deposits =
+        (bank.total_deposits as f64 * E.powf(bank.interest_rate as f64 * time_diff as f64)) as u64;
+    
+    let value_per_share = bank.total_deposits as f64 / bank.total_deposits_shares as f64;
+    
+    let user_value = deposited_value as f64 / value_per_share;
+    
+    if user_value < amount as f64 {
         return Err(ErrorCode::InsufficientFunds.into());
     }
 
@@ -81,7 +96,6 @@ pub fn process_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
 
     token_interface::transfer_checked(cpi_ctx, amount, decimals)?;
 
-    let bank = &mut ctx.accounts.bank;
     let shares_to_remove =
         (amount as f64 / bank.total_deposits as f64) * bank.total_deposits_shares as f64;
 
@@ -89,8 +103,10 @@ pub fn process_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
 
     if ctx.accounts.mint.to_account_info().key() == user.usdc_address {
         user.deposited_usdc -= shares_to_remove as u64;
+        user.deposited_usdc_shares -= shares_to_remove as u64;
     } else {
         user.deposited_sol -= shares_to_remove as u64;
+        user.deposited_sol_shares -= shares_to_remove as u64;
     }
 
     bank.total_deposits -= amount;

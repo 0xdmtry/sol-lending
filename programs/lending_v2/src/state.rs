@@ -31,6 +31,7 @@ pub struct User {
 
     /// Last timestamp (Unix time) the account was updated (used for interest accrual, liquidation checks, etc.)
     pub last_updated: i64,
+
 }
 
 #[account]
@@ -60,4 +61,6 @@ pub struct Bank {
     pub max_ltv: u64,
 
     pub last_updated: i64,
+    pub interest_rate: u64,
+    
 }
