@@ -1,0 +1,2 @@
+```bach
+anchor build```
