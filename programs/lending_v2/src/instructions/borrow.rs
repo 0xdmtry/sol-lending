@@ -1,11 +1,11 @@
 use std::f32::consts::E;
 
+use crate::error::ErrorCode;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token_interface::{ self, Mint, TokenAccount, TokenInterface, TransferChecked };
-use crate::state::*;
-use crate::error::ErrorCode;
-
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
 
 #[derive(Accounts)]
 pub struct Borrow<'info> {
@@ -44,6 +44,8 @@ pub struct Borrow<'info> {
     )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
+    pub price_update: Account<'info, PriceUpdateV2>,
+
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 
@@ -51,11 +53,8 @@ pub struct Borrow<'info> {
 }
 
 pub fn process_borrow(ctx: Context<Borrow>) -> Result<()> {
-    
-    
     let bank = &mut ctx.accounts.bank;
     let user = &mut ctx.accounts.user;
-    
-    
+
     Ok(())
 }
