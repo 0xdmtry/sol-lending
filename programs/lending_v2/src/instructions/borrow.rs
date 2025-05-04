@@ -52,9 +52,30 @@ pub struct Borrow<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn process_borrow(ctx: Context<Borrow>) -> Result<()> {
+pub fn process_borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
     let bank = &mut ctx.accounts.bank;
     let user = &mut ctx.accounts.user;
+
+    let price_update = &mut ctx.accounts.price_update;
+    let total_collateral: u64 = match ctx.accounts.mint.to_account_info().key() {
+        key if key == user.usdc_address => {
+            let sol_feed_id = get_feed_id_from_hex(SOL_USD_FEED_ID)?;
+            let sol_price =
+                price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &sol_feed_id)?;
+            let accrued_interest = calculate_accrued_interest(
+                user.deposited_sol,
+                bank.interest_rate,
+                user.last_updated,
+            )?;
+            sol_price.price as u64 * (user.deposited_sol + accrued_interest)
+        }
+        _ => {
+            let usdc_feed_id = get_feed_id_from_hex(USDC_USD_FEED_ID)?;
+            let usdc_price =
+                price_update.get_price_no_older_than(&Clock::get()?, MAXIMUM_AGE, &usdc_feed_id)?;
+            usdc_price.price as u64 * user.deposited_usdc
+        }
+    };
 
     Ok(())
 }
