@@ -48,6 +48,11 @@ pub struct Bank {
     /// Total number of shares issued for all deposits (used to calculate proportional ownership and yield)
     pub total_deposits_shares: u64,
 
+    pub total_borrowed: u64,
+    pub total_borrowed_shares: u64,
+    
+    
+
     /// Liquidation threshold (e.g., 85%) — if collateral value drops below this, liquidation may occur
     pub liquidation_threshold: u64,
 
